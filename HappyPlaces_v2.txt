@@ -1,0 +1,5 @@
+In this version we have done the list of steps.
+
+1. We have designed the layout for AddHappyPlaceActivity using the constraintLayout.
+2. We have launched the AddHappyPlaceActivity from MainActivity.
+3. We have added all the constant values in android constant resource file as dimen, string, color.xml.

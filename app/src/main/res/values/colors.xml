@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorAccent">#adcbe3</color>
+    <color name="PrimarySuperDark">#2a4d69</color>
+    <color name="PrimaryDark">#4b86b4</color>
+    <color name="Primary">#adcbe3</color>
+    <color name="PrimaryLight">#e7eff6</color>
+    <color name="PrimarySuperLight">#63ace5</color>
+
+    <color name="primary_text_color">#212121</color>
+    <color name="secondary_text_color">#9AA2AF</color>
+    <color name="white_color">#FFFFFF</color>
+    <color name="button_background_color">#63ace5</color>
+    <!--END-->
+
+    <!--#96ceb4 • #ffeead • #ff6f69 • #ffcc5c • #88d8b0-->
+    <!--#2a4d69 • #4b86b4 • #adcbe3 • #e7eff6 • #63ace5
+    #96ceb4 • #ffeead • #ff6f69 • #ffcc5c • #88d8b0-->
+</resources>
