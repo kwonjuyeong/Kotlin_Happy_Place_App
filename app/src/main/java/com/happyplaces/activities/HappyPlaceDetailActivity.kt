@@ -17,8 +17,8 @@ class HappyPlaceDetailActivity : AppCompatActivity() {
 
         if (intent.hasExtra(MainActivity.EXTRA_PLACE_DETAILS)) {
             happyPlaceDetailModel =
-                intent.getSerializableExtra(MainActivity.EXTRA_PLACE_DETAILS) as HappyPlaceModel
-
+                intent.getParcelableExtra(MainActivity.EXTRA_PLACE_DETAILS) as HappyPlaceModel
+                //Serializable은 사용이 쉽지만 성능이 떨어지고 Parcelable은 사용은 어렵지만 성능이 좋다.
         }
 
         if (happyPlaceDetailModel != null) {
