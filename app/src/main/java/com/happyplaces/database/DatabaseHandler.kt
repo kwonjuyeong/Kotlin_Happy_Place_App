@@ -28,7 +28,7 @@ class DatabaseHandler(context: Context) :
     }
 
     override fun onCreate(db: SQLiteDatabase?) {
-
+        //creating table with fields
         val CREATE_HAPPY_PLACE_TABLE = ("CREATE TABLE " + TABLE_HAPPY_PLACE + "("
                 + KEY_ID + " INTEGER PRIMARY KEY,"
                 + KEY_TITLE + " TEXT,"
@@ -45,6 +45,7 @@ class DatabaseHandler(context: Context) :
         db!!.execSQL("DROP TABLE IF EXISTS $TABLE_HAPPY_PLACE")
         onCreate(db)
     }
+
 
     fun addHappyPlace(happyPlace: HappyPlaceModel): Long {
         val db = this.writableDatabase
@@ -65,38 +66,75 @@ class DatabaseHandler(context: Context) :
         val result = db.insert(TABLE_HAPPY_PLACE, null, contentValues)
         //2nd argument is String containing nullColumnHack  
 
-        db.close()
+        db.close() // Closing database connection
         return result
     }
 
-    fun getHappyPlacesList():ArrayList<HappyPlaceModel>{
-        val happyPlaceList = ArrayList<HappyPlaceModel>()
-        val selectQuery = "SELECT *FROM $TABLE_HAPPY_PLACE"
+    fun getHappyPlacesList(): ArrayList<HappyPlaceModel> {
+
+        // A list is initialize using the data model class in which we will add the values from cursor.
+        val happyPlaceList: ArrayList<HappyPlaceModel> = ArrayList()
+
+        val selectQuery = "SELECT  * FROM $TABLE_HAPPY_PLACE" // Database select query
+
         val db = this.readableDatabase
 
-        try{
-            val cursor : Cursor = db.rawQuery(selectQuery, null)
-            if(cursor.moveToFirst()){
-                do{
+        try {
+            val cursor: Cursor = db.rawQuery(selectQuery, null)
+            if (cursor.moveToFirst()) {
+                do {
                     val place = HappyPlaceModel(
-                        cursor.getInt(cursor.getColumnIndex(KEY_ID)),
-                        cursor.getString(cursor.getColumnIndex(KEY_TITLE)),
-                        cursor.getString(cursor.getColumnIndex(KEY_IMAGE)),
-                        cursor.getString(cursor.getColumnIndex(KEY_DESCRIPTION)),
-                        cursor.getString(cursor.getColumnIndex(KEY_DATE)),
-                        cursor.getString(cursor.getColumnIndex(KEY_LOCATION)),
-                        cursor.getDouble(cursor.getColumnIndex(KEY_LATITUDE)),
-                        cursor.getDouble(cursor.getColumnIndex(KEY_LONGITUDE))
+                            cursor.getInt(cursor.getColumnIndex(KEY_ID)),
+                            cursor.getString(cursor.getColumnIndex(KEY_TITLE)),
+                            cursor.getString(cursor.getColumnIndex(KEY_IMAGE)),
+                            cursor.getString(cursor.getColumnIndex(KEY_DESCRIPTION)),
+                            cursor.getString(cursor.getColumnIndex(KEY_DATE)),
+                            cursor.getString(cursor.getColumnIndex(KEY_LOCATION)),
+                            cursor.getDouble(cursor.getColumnIndex(KEY_LATITUDE)),
+                            cursor.getDouble(cursor.getColumnIndex(KEY_LONGITUDE))
                     )
                     happyPlaceList.add(place)
 
-                }while(cursor.moveToNext())
+                } while (cursor.moveToNext())
             }
             cursor.close()
-        }catch (e: SQLiteException){
+        } catch (e: SQLiteException) {
             db.execSQL(selectQuery)
             return ArrayList()
         }
         return happyPlaceList
     }
+
+    //삭제
+    fun deleteHappyPlace(happyPlace: HappyPlaceModel) : Int{
+        val db = this.writableDatabase
+        val success = db.delete(TABLE_HAPPY_PLACE, KEY_ID + "=" + happyPlace.id, null)
+        db.close()
+        return success
+    }
+
+
+    fun updateHappyPlace(happyPlace: HappyPlaceModel): Int {
+        val db = this.writableDatabase
+        val contentValues = ContentValues()
+        contentValues.put(KEY_TITLE, happyPlace.title) // HappyPlaceModelClass TITLE
+        contentValues.put(KEY_IMAGE, happyPlace.image) // HappyPlaceModelClass IMAGE
+        contentValues.put(
+            KEY_DESCRIPTION,
+            happyPlace.description
+        ) // HappyPlaceModelClass DESCRIPTION
+        contentValues.put(KEY_DATE, happyPlace.date) // HappyPlaceModelClass DATE
+        contentValues.put(KEY_LOCATION, happyPlace.location) // HappyPlaceModelClass LOCATION
+        contentValues.put(KEY_LATITUDE, happyPlace.latitude) // HappyPlaceModelClass LATITUDE
+        contentValues.put(KEY_LONGITUDE, happyPlace.longitude) // HappyPlaceModelClass LONGITUDE
+
+        // Updating Row
+        val success =
+            db.update(TABLE_HAPPY_PLACE, contentValues, KEY_ID + "=" + happyPlace.id, null)
+        //2nd argument is String containing nullColumnHack
+
+        db.close() // Closing database connection
+        return success
+    }
+    // END
 }

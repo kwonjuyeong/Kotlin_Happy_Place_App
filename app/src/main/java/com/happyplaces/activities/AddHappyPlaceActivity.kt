@@ -41,6 +41,8 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
     private var mLatitude : Double = 0.0
     private var mLongitude : Double = 0.0
 
+    private var mHappyPlaceDetails : HappyPlaceModel ?= null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_happy_place)
@@ -52,6 +54,11 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
             onBackPressed()
         }
 
+        if(intent.hasExtra(MainActivity.EXTRA_PLACE_DETAILS)){
+            mHappyPlaceDetails = intent.getParcelableExtra(MainActivity.EXTRA_PLACE_DETAILS) as HappyPlaceModel
+
+        }
+
         dateSetListener = DatePickerDialog.OnDateSetListener { _, year,month, dayOfMonth ->
         cal.set(Calendar.YEAR, year)
         cal.set(Calendar.MONTH, month)
@@ -59,6 +66,22 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
         updateDateInView()
         }
         updateDateInView()
+
+        if(mHappyPlaceDetails != null){
+            supportActionBar?.title = "Edit Happy Place"
+            et_title.setText(mHappyPlaceDetails!!.title)
+            et_description.setText(mHappyPlaceDetails!!.description)
+            et_date.setText(mHappyPlaceDetails!!.date)
+            et_location.setText(mHappyPlaceDetails!!.location)
+            mLatitude = mHappyPlaceDetails!!.latitude
+            mLongitude = mHappyPlaceDetails!!.longitude
+
+            saveImageToInternalStorage = Uri.parse(mHappyPlaceDetails!!.image)
+
+            iv_place_image.setImageURI(saveImageToInternalStorage)
+            btn_save.text = "UPDATE"
+        }
+
         et_date.setOnClickListener(this)
         tv_add_image.setOnClickListener(this)
         btn_save.setOnClickListener(this)
@@ -107,7 +130,7 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
                         Toast.makeText(this, "사진을 선택해주세요!", Toast.LENGTH_SHORT).show()
                     }else -> {
                         val happyPlaceModel = HappyPlaceModel(
-                            0,
+                            if(mHappyPlaceDetails == null) 0 else mHappyPlaceDetails!!.id,
                             et_title.text.toString(),
                             saveImageToInternalStorage.toString(),
                             et_description.text.toString(),
@@ -117,12 +140,23 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
                             mLongitude
                         )
                     val dbHandler = DatabaseHandler(this)
-                    val addHappyPlace = dbHandler.addHappyPlace(happyPlaceModel)
+                    if(mHappyPlaceDetails == null){
+                        val addHappyPlace = dbHandler.addHappyPlace(happyPlaceModel)
+                        if(addHappyPlace > 0){
+                            setResult(Activity.RESULT_OK)
+                            finish()
+                            Toast.makeText(this, "Happy place가 등록되었어요!", Toast.LENGTH_SHORT).show()
+                        }
+                    }else{
+                        val updateHappyPlace = dbHandler.updateHappyPlace(happyPlaceModel)
+                        if(updateHappyPlace > 0){
+                            setResult(Activity.RESULT_OK)
+                            finish()
+                            Toast.makeText(this, "Happy place가 수정되었어요!", Toast.LENGTH_SHORT).show()
+                    }
 
-                    if(addHappyPlace > 0){
-                        setResult(Activity.RESULT_OK)
-                        finish()
-                        Toast.makeText(this, "Happy place가 등록되었어요!", Toast.LENGTH_SHORT).show()
+
+
                     }
                 }
             }
