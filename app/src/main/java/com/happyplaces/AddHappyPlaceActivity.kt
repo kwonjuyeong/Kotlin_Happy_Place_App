@@ -1,14 +1,22 @@
 package com.happyplaces
 
 import android.Manifest
+import android.app.Activity
 import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
+import android.graphics.Bitmap
+import android.media.MediaRecorder.VideoSource.CAMERA
 import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.provider.Settings
+import android.util.Log
 import android.view.View
+import android.widget.Gallery
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.karumi.dexter.Dexter
@@ -17,6 +25,10 @@ import com.karumi.dexter.PermissionToken
 import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
 import kotlinx.android.synthetic.main.activity_add_happy_place.*
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -31,8 +43,6 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_happy_place)
 
-
-
         //ActionBar
         setSupportActionBar(toolbar_add_place)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -40,7 +50,7 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
             onBackPressed()
         }
 
-        dateSetListener = DatePickerDialog.OnDateSetListener { view, year,month, dayOfMonth ->
+        dateSetListener = DatePickerDialog.OnDateSetListener { _, year,month, dayOfMonth ->
         cal.set(Calendar.YEAR, year)
         cal.set(Calendar.MONTH, month)
         cal.set(Calendar.DAY_OF_MONTH, dayOfMonth)
@@ -64,39 +74,79 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
                 ).show()
             }
 
-
             R.id.tv_add_image -> {
                 val pictureDialog = androidx.appcompat.app.AlertDialog.Builder(this)
-                pictureDialog.setTitle("사진을 선택하세요.")
+                pictureDialog.setTitle("사진을 선택해주세요")
                 val pictureDialogItems =
-                    arrayOf("갤러리에서 선택하기", "카메라로 찍기")
+                    arrayOf("갤러리에서 선택하기", "카메라로 사진 찍기")
                 pictureDialog.setItems(
                     pictureDialogItems
                 ) { dialog, which ->
                     when (which) {
                         0 -> choosePhotoFromGallery()
-                        1 -> Toast.makeText(this@AddHappyPlaceActivity,"Camera selection coming soon...", Toast.LENGTH_SHORT).show()
+                        1 -> takePhotoFromCamera()
                     }
                 }
                 pictureDialog.show()
             }
-            // END
         }
     }
 
-    private fun choosePhotoFromGallery() {
+    private fun updateDateInView(){
+        val myFormat = "yyyy.MM.dd"
+        val sdf = SimpleDateFormat(myFormat, Locale.getDefault())
+        et_date.setText(sdf.format(cal.time).toString())
+    }
+
+
+    public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == Activity.RESULT_OK) {
+            if (requestCode == GALLERY) {
+                if (data != null) {
+                    val contentURI = data.data
+                    try {
+                        // Here this is used to get an bitmap from URI
+                        @Suppress("DEPRECATION")
+                        val selectedImageBitmap =
+                            MediaStore.Images.Media.getBitmap(this.contentResolver, contentURI)
+
+                        val saveImageToInternalStorage = saveImageToInternalStorage(selectedImageBitmap)
+                        Log.e("Saved image: ", "Path :: $saveImageToInternalStorage")
+
+                        iv_place_image!!.setImageBitmap(selectedImageBitmap) // Set the selected image from GALLERY to imageView.
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                        Toast.makeText(this@AddHappyPlaceActivity, "Failed!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else if (requestCode == CAMERA) {
+
+                val thumbnail: Bitmap = data!!.extras!!.get("data") as Bitmap
+
+                val saveImageToInternalStorage = saveImageToInternalStorage(thumbnail)
+                Log.e("Saved image: ", "Path :: $saveImageToInternalStorage")
+
+                iv_place_image!!.setImageBitmap(thumbnail)
+            }
+        } else if (resultCode == Activity.RESULT_CANCELED) {
+            Log.e("Cancelled", "Cancelled")
+        }
+    }
+
+    private fun takePhotoFromCamera() {
+
         Dexter.withActivity(this)
             .withPermissions(
                 Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.CAMERA
             )
             .withListener(object : MultiplePermissionsListener {
                 override fun onPermissionsChecked(report: MultiplePermissionsReport?) {
-
-
                     if (report!!.areAllPermissionsGranted()) {
-
-                        Toast.makeText(this@AddHappyPlaceActivity,"Storage READ/WRITE permission are granted.", Toast.LENGTH_SHORT).show()
+                        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                        startActivityForResult(intent, CAMERA)
                     }
                 }
 
@@ -108,8 +158,42 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
                 }
             }).onSameThread()
             .check()
-        // END
     }
+
+
+    private fun choosePhotoFromGallery() {
+        Dexter.withActivity(this)
+            .withPermissions(
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+            .withListener(object : MultiplePermissionsListener {
+                override fun onPermissionsChecked(report: MultiplePermissionsReport?) {
+
+                    // Here after all the permission are granted launch the gallery to select and image.
+                    if (report!!.areAllPermissionsGranted()) {
+
+                        val galleryIntent = Intent(
+                            Intent.ACTION_PICK,
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                        )
+
+                        startActivityForResult(galleryIntent, GALLERY)
+                        // END
+                    }
+                }
+
+                override fun onPermissionRationaleShouldBeShown(
+                    permissions: MutableList<PermissionRequest>?,
+                    token: PermissionToken?
+                ) {
+                    showRationalDialogForPermissions()
+                }
+            }).onSameThread()
+            .check()
+    }
+
+
 
     private fun showRationalDialogForPermissions() {
         androidx.appcompat.app.AlertDialog.Builder(this)
@@ -131,15 +215,27 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
             }.show()
     }
 
-    private fun updateDateInView(){
+    //기기에 파일 저장
+    private fun saveImageToInternalStorage(bitmap: Bitmap):Uri{
+        val wrapper = ContextWrapper(applicationContext)
+        var file = wrapper.getDir(IMAGE_DIRECTORY, Context.MODE_PRIVATE)
+        file = File(file, "${UUID.randomUUID()}.jpg")
 
-        val myFormat = "yyyy.MM.dd"
-        val sdf = SimpleDateFormat(myFormat, Locale.getDefault())
-        et_date.setText(sdf.format(cal.time).toString())
-
-
+        try{
+            val stream : OutputStream = FileOutputStream(file)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+            stream.flush()
+            stream.close()
+        }catch (e:IOException){
+            e.printStackTrace()
+        }
+        return Uri.parse(file.absolutePath)
     }
 
-
+    companion object{
+        private const val GALLERY = 1
+        private const val CAMERA = 2
+        private const val IMAGE_DIRECTORY = "HappyPlacesImages"
+    }
 
 }
